@@ -1,10 +1,14 @@
 package base
+
 import (
 	"io"
+
 	"github.com/labstack/gommon/log"
 )
+
 type (
-	Logger struct {
+	//Logger is the interface for adapt your log lib
+	Logger interface {
 		Output() io.Writer
 		SetOutput(w io.Writer)
 		Prefix() string

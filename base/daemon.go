@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/labstack/gommon/log"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -37,3 +38,40 @@ type (
 		Logger   Logger
 	}
 )
+
+// New creates an instance of Echo.
+func New() (e *Feather) {
+	e = &Feather{
+		Server:    new(http.Server),
+		TLSServer: new(http.Server),
+		AutoTLSManager: autocert.Manager{
+			Prompt: autocert.AcceptTOS,
+		},
+		Logger:   log.New("feather"),
+		colorer:  color.New(),
+		maxParam: new(int),
+	}
+	e.Server.Handler = e
+	e.TLSServer.Handler = e
+	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
+	e.Binder = &DefaultBinder{}
+	e.Logger.SetLevel(log.ERROR)
+	e.StdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
+	e.pool.New = func() interface{} {
+		return e.NewContext(nil, nil)
+	}
+	e.router = NewRouter(e)
+	return
+}
+
+// NewContext returns a Context instance.
+func (e *Feather) NewContext(r *http.Request, w http.ResponseWriter) Context {
+	return &context{
+		request:  r,
+		response: NewResponse(w, e),
+		store:    make(Map),
+		echo:     e,
+		pvalues:  make([]string, *e.maxParam),
+		handler:  NotFoundHandler,
+	}
+}
